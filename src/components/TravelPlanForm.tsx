@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,7 +57,7 @@ const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
         }
       })
     });
@@ -75,7 +74,7 @@ const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
     const days = Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
     return `
-다음 조건에 맞는 ${days}일 여행 일정을 JSON 형태로 생성해주세요:
+다음 조건에 맞는 ${days}일 여행 일정을 JSON 형태로만 생성해주세요. 다른 설명 없이 오직 JSON만 응답해주세요:
 
 목적지: ${formData.destination}
 여행 기간: ${formData.startDate} ~ ${formData.endDate} (${days}일)
@@ -83,7 +82,7 @@ const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
 관심사: ${formData.interests}
 예산: ${formData.budget}만원
 
-다음 JSON 형식으로 응답해주세요:
+응답 형식 (JSON만):
 [
   {
     "title": "1일차 - 도착 및 시내 탐방",
@@ -99,8 +98,55 @@ const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
   }
 ]
 
-각 일정은 시간대별로 구체적인 활동, 장소, 설명을 포함해주세요. 관심사를 반영하여 맞춤형 일정을 제안해주세요.
+주의사항: 
+- 오직 유효한 JSON 형식으로만 응답
+- 각 일정은 시간대별로 구체적인 활동, 장소, 설명 포함
+- 관심사를 반영한 맞춤형 일정 제안
+- JSON 외 다른 텍스트나 설명 포함하지 말 것
 `;
+  };
+
+  const parseJsonFromResponse = (response: string): TravelPlan[] => {
+    try {
+      // 먼저 ```json으로 감싸진 부분 찾기
+      let jsonText = response;
+      
+      const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1];
+      } else {
+        // JSON 배열 패턴 찾기
+        const arrayMatch = response.match(/\[([\s\S]*)\]/);
+        if (arrayMatch) {
+          jsonText = arrayMatch[0];
+        }
+      }
+      
+      // JSON 파싱 시도
+      const parsed = JSON.parse(jsonText);
+      
+      // 배열인지 확인
+      if (!Array.isArray(parsed)) {
+        throw new Error('응답이 배열 형태가 아닙니다.');
+      }
+      
+      return parsed;
+    } catch (error) {
+      console.error('JSON 파싱 실패:', error);
+      console.error('원본 응답:', response);
+      
+      // 파싱 실패 시 기본 일정 반환
+      return [{
+        title: "1일차 - 기본 일정",
+        day: 1,
+        activities: [{
+          time: "09:00",
+          activity: "여행 시작",
+          location: formData.destination,
+          description: "AI 응답 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+        }]
+      }];
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,21 +173,8 @@ const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
       const result = await generateTravelPlan(apiKey, prompt);
       console.log('AI 응답:', result);
       
-      // JSON 추출 시도
-      let travelPlan;
-      try {
-        // JSON 부분만 추출 (```json으로 감싸진 경우 처리)
-        const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/) || result.match(/\[([\s\S]*)\]/);
-        if (jsonMatch) {
-          travelPlan = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-        } else {
-          travelPlan = JSON.parse(result);
-        }
-      } catch (parseError) {
-        console.error('JSON 파싱 오류:', parseError);
-        toast.error('AI 응답을 처리하는 중 오류가 발생했습니다.');
-        return;
-      }
+      // JSON 파싱
+      const travelPlan = parseJsonFromResponse(result);
       
       toast.success('AI 여행 일정이 생성되었습니다!');
       
