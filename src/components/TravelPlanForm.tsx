@@ -8,7 +8,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar, MapPin, Heart, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TravelPlanForm = () => {
+interface TravelPlan {
+  title: string;
+  day: number;
+  activities: Array<{
+    time: string;
+    activity: string;
+    location: string;
+    description: string;
+  }>;
+}
+
+interface TravelPlanFormProps {
+  onPlanGenerated?: (plan: TravelPlan[]) => void;
+}
+
+const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
   const [formData, setFormData] = useState({
     destination: '',
     startDate: '',
@@ -27,6 +42,67 @@ const TravelPlanForm = () => {
     }));
   };
 
+  const generateTravelPlan = async (apiKey: string, prompt: string) => {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 호출 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
+  };
+
+  const createPrompt = () => {
+    const days = Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    return `
+다음 조건에 맞는 ${days}일 여행 일정을 JSON 형태로 생성해주세요:
+
+목적지: ${formData.destination}
+여행 기간: ${formData.startDate} ~ ${formData.endDate} (${days}일)
+여행자 수: ${formData.travelers}명
+관심사: ${formData.interests}
+예산: ${formData.budget}만원
+
+다음 JSON 형식으로 응답해주세요:
+[
+  {
+    "title": "1일차 - 도착 및 시내 탐방",
+    "day": 1,
+    "activities": [
+      {
+        "time": "09:00",
+        "activity": "공항 도착",
+        "location": "${formData.destination} 공항",
+        "description": "공항 도착 후 숙소로 이동"
+      }
+    ]
+  }
+]
+
+각 일정은 시간대별로 구체적인 활동, 장소, 설명을 포함해주세요. 관심사를 반영하여 맞춤형 일정을 제안해주세요.
+`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -35,18 +111,60 @@ const TravelPlanForm = () => {
       return;
     }
 
+    // API 키 확인
+    const apiKey = localStorage.getItem('gemini_api_key');
+    if (!apiKey) {
+      toast.error('먼저 Gemini API 키를 설정해주세요!');
+      return;
+    }
+
     setIsGenerating(true);
     
     try {
-      // Gemini API 호출 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const prompt = createPrompt();
+      console.log('생성된 프롬프트:', prompt);
+      
+      const result = await generateTravelPlan(apiKey, prompt);
+      console.log('AI 응답:', result);
+      
+      // JSON 추출 시도
+      let travelPlan;
+      try {
+        // JSON 부분만 추출 (```json으로 감싸진 경우 처리)
+        const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/) || result.match(/\[([\s\S]*)\]/);
+        if (jsonMatch) {
+          travelPlan = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        } else {
+          travelPlan = JSON.parse(result);
+        }
+      } catch (parseError) {
+        console.error('JSON 파싱 오류:', parseError);
+        toast.error('AI 응답을 처리하는 중 오류가 발생했습니다.');
+        return;
+      }
+      
       toast.success('AI 여행 일정이 생성되었습니다!');
       
-      // 실제 구현에서는 여기서 Gemini API를 호출합니다
-      console.log('여행 계획 데이터:', formData);
+      // 생성된 일정을 부모 컴포넌트로 전달
+      if (onPlanGenerated) {
+        onPlanGenerated(travelPlan);
+      }
+      
+      console.log('파싱된 여행 일정:', travelPlan);
       
     } catch (error) {
-      toast.error('일정 생성 중 오류가 발생했습니다.');
+      console.error('일정 생성 오류:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('401')) {
+          toast.error('API 키가 유효하지 않습니다. 키를 다시 확인해주세요.');
+        } else if (error.message.includes('403')) {
+          toast.error('API 키 권한이 없습니다. Gemini API가 활성화되어 있는지 확인해주세요.');
+        } else {
+          toast.error(`일정 생성 중 오류가 발생했습니다: ${error.message}`);
+        }
+      } else {
+        toast.error('일정 생성 중 알 수 없는 오류가 발생했습니다.');
+      }
     } finally {
       setIsGenerating(false);
     }
