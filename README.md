@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# 🌍 TravelFlow
+**TravelFlow**는 AI가 여행 일정을 자동 생성하고, 지도 기반으로 경로를 시각화하며, 협업 보드를 통해 동행자와 여행 계획을 공유할 수 있는 웹 기반 여행 플래너입니다.
 
-## Project info
+- **일정 자동 생성**: 사용자가 입력한 여행지, 기간, 테마를 기반으로 Gemini API를 활용하여 AI가 여행 일정을 생성합니다.
+- **지도 동선 시각화**: 생성된 장소들을 지도 위에 마커 및 경로 선(Polyline)으로 표시합니다.
+- **동선 최적화**: 일정 편집 시 장소 순서에 따라 경로를 자동 업데이트합니다.
+- **협업 보드**: 동행자와 함께 장소, 숙소, 할 일 등을 카드 형식으로 정리할 수 있습니다.
 
-**URL**: https://lovable.dev/projects/5c1cc7b3-8f83-4c7e-aae0-164ae9ddf5bf
+[서비스 웹페이지](https://flow-gemini-travels.lovable.app/)
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## ✨ 주요 특징
 
-**Use Lovable**
+- ✅ **Gemini API 연동** (사용자 키 직접 입력)
+- ✅ **바닐라 JS 기반 (React/Vue 등 프레임워크 미사용)**
+- ✅ **Google Maps API로 지도/경로 시각화**
+- ✅ **Drag & Drop으로 일정 수정**
+- ✅ **협업 보드로 여행 준비 정리**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5c1cc7b3-8f83-4c7e-aae0-164ae9ddf5bf) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🔧 기술 스택
 
-**Use your preferred IDE**
+- **Frontend**: HTML, CSS, JavaScript (Vanilla)
+- **AI**: Google Gemini Pro API
+- **지도 시각화**: Google Maps JavaScript API
+- **저장소**: LocalStorage (임시 보관용)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 기본 사용 흐름
 
-Follow these steps:
+1. **Gemini API 키 등록**  
+   - “API Key 입력” 버튼 클릭 → 본인의 API 키 입력  
+   - 입력된 키는 브라우저에 저장됨 (LocalStorage 활용)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+2. **여행 정보 입력**  
+   - 도시, 여행 날짜, 테마 등 작성  
+   - 예: 서울 / 3박 4일 / 맛집 + 박물관
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. **일정 자동 생성 요청**  
+   - “일정 생성” 클릭 → Gemini API 호출  
+   - 결과는 하루 단위로 분리되어 출력됨
 
-# Step 3: Install the necessary dependencies.
-npm i
+4. **일정 편집 & 지도 확인**  
+   - 각 장소는 리스트 + 지도 위에 마커로 표시됨  
+   - 장소 순서를 변경하면 지도 동선이 재계산됨
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+5. **협업 보드 사용**  
+   - 숙소 / 할일 / 메모 카드를 추가 가능  
+   - 카드 간 이동, 메모 작성 등 인터랙션 지원
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📜 라이선스
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/5c1cc7b3-8f83-4c7e-aae0-164ae9ddf5bf) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+MIT License
