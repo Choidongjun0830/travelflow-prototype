@@ -36,7 +36,6 @@ const TravelPlan = () => {
   const [plans, setPlans] = useState<TravelPlan[]>([]);
   const [mapLocations, setMapLocations] = useState<Location[]>([]);
   const [showForm, setShowForm] = useState(true);
-  const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
 
   useEffect(() => {
     // 로컬 스토리지에서 저장된 일정 불러오기
@@ -56,13 +55,6 @@ const TravelPlan = () => {
   }, []);
 
   const extractLocationsFromPlans = async (travelPlans: TravelPlan[]) => {
-    const apiKey = localStorage.getItem('google_maps_api_key');
-    if (!apiKey) {
-      console.log('Google Maps API 키가 없어 위치 추출을 건너뜁니다.');
-      toast.error('Google Maps API 키가 필요합니다. 홈페이지에서 설정해주세요.');
-      return;
-    }
-
     const allActivities = travelPlans.flatMap(plan => plan.activities);
     const uniqueLocations = Array.from(
       new Set(allActivities.map(activity => activity.location))
@@ -79,8 +71,17 @@ const TravelPlan = () => {
       return;
     }
 
-    console.log('위치 추출 시작:', uniqueLocations.length, '개 장소');
-    await handleLocationExtract(uniqueLocations);
+    console.log('위치 추출:', uniqueLocations.length, '개 장소');
+    // 가짜 지도에 위치 표시 (실제 지오코딩 없이)
+    const fakeLocations: Location[] = uniqueLocations.map((location, index) => ({
+      name: location.name,
+      lat: 37.5665 + (index * 0.01), // 서울 기준 가짜 좌표
+      lng: 126.9780 + (index * 0.01),
+      address: location.address
+    }));
+    
+    setMapLocations(fakeLocations);
+    toast.success(`${fakeLocations.length}개 장소가 지도에 표시됩니다.`);
   };
 
   const handlePlanGenerated = (generatedPlans: any[]) => {
@@ -117,57 +118,18 @@ const TravelPlan = () => {
   };
 
   const handleLocationExtract = async (locations: Array<{name: string, address: string}>) => {
-    const apiKey = localStorage.getItem('google_maps_api_key');
-    if (!apiKey) {
-      toast.error('Google Maps API 키가 필요합니다. 홈페이지에서 설정해주세요.');
-      return;
-    }
-
-    console.log('Geocoding 시작:', locations);
-    setIsGeocodingLoading(true);
-    const geocodedLocations: Location[] = [];
+    console.log('지도에 위치 표시:', locations);
     
-    try {
-      for (const location of locations) {
-        try {
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location.address)}&key=${apiKey}&language=ko`
-          );
-          const data = await response.json();
-          
-          console.log(`Geocoding 결과 for ${location.address}:`, data);
-          
-          if (data.results && data.results.length > 0) {
-            const result = data.results[0];
-            geocodedLocations.push({
-              name: location.name,
-              lat: result.geometry.location.lat,
-              lng: result.geometry.location.lng,
-              address: result.formatted_address
-            });
-            console.log(`성공: ${location.name} -> ${result.geometry.location.lat}, ${result.geometry.location.lng}`);
-          } else {
-            console.warn(`Geocoding 실패: ${location.address}`, data);
-          }
-          
-          // API 호출 간 약간의 딜레이
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.error('Geocoding 오류:', error);
-        }
-      }
-    } finally {
-      setIsGeocodingLoading(false);
-    }
+    // 가짜 지도에 위치 표시 (실제 지오코딩 없이)
+    const fakeLocations: Location[] = locations.map((location, index) => ({
+      name: location.name,
+      lat: 37.5665 + (index * 0.01), // 서울 기준 가짜 좌표
+      lng: 126.9780 + (index * 0.01),
+      address: location.address
+    }));
     
-    console.log('최종 geocoded 위치들:', geocodedLocations);
-    setMapLocations(geocodedLocations);
-    
-    if (geocodedLocations.length > 0) {
-      toast.success(`${geocodedLocations.length}개 장소가 지도에 표시됩니다.`);
-    } else {
-      toast.error('주소를 찾을 수 없습니다. 더 구체적인 주소를 입력해주세요.');
-    }
+    setMapLocations(fakeLocations);
+    toast.success(`${fakeLocations.length}개 장소가 지도에 표시됩니다.`);
   };
 
   const exportToPDF = () => {
@@ -253,14 +215,6 @@ const TravelPlan = () => {
                 />
               </div>
               <div className="space-y-6">
-                {isGeocodingLoading && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
-                      <span className="text-blue-700 font-medium">장소 위치를 찾는 중...</span>
-                    </div>
-                  </div>
-                )}
                 <GoogleMap 
                   locations={mapLocations}
                   onLocationsChange={(newLocations) => setMapLocations(newLocations)}

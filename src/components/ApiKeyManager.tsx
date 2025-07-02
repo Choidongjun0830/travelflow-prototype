@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,12 +14,11 @@ const ApiKeyManager = () => {
 
   const handleSaveKeys = () => {
     if (!geminiKey.trim()) {
-      toast.error('모든 API 키를 입력해주세요!');
+      toast.error('Gemini API 키를 입력해주세요!');
       return;
     }
 
     localStorage.setItem('gemini_api_key', geminiKey);
-    
     setIsKeysSaved(true);
     toast.success('API 키가 성공적으로 저장되었습니다!');
   };
@@ -54,7 +52,7 @@ const ApiKeyManager = () => {
         <Alert className="mb-6 border-yellow-200 bg-yellow-50">
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="text-yellow-800">
-            AI 일정 생성과 지도 기능을 사용하려면 API 키가 필요합니다. 
+            AI 일정 생성 기능을 사용하려면 Gemini API 키가 필요합니다. 
             키는 브라우저에 안전하게 저장되며 외부로 전송되지 않습니다.
           </AlertDescription>
         </Alert>
@@ -97,6 +95,7 @@ const ApiKeyManager = () => {
             <Button 
               onClick={handleSaveKeys}
               className="flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white"
+              disabled={!geminiKey.trim()}
             >
               {isKeysSaved ? (
                 <div className="flex items-center space-x-2">
@@ -129,7 +128,7 @@ const ApiKeyManager = () => {
                 <span className="font-semibold">API 키가 설정되었습니다!</span>
               </div>
               <p className="text-sm text-green-700 mt-1">
-                이제 AI 여행 일정 생성과 지도 기능을 사용할 수 있습니다.
+                이제 AI 여행 일정 생성 기능을 사용할 수 있습니다.
               </p>
             </div>
           )}
