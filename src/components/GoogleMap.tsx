@@ -35,11 +35,11 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
 
   useEffect(() => {
     const apiKey = localStorage.getItem('google_maps_api_key');
-    if (apiKey && !isInitialized) {
+    if (apiKey && !isInitialized && !isLoading) {
       console.log('Google Maps API 키 발견, 지도 로드 시작');
       loadGoogleMaps(apiKey);
     }
-  }, [isInitialized]);
+  }, [isInitialized, isLoading]);
 
   const loadGoogleMaps = (key: string) => {
     if (window.google && window.google.maps) {
@@ -65,7 +65,10 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
     script.onload = () => {
       console.log('Google Maps API 스크립트 로드 완료');
       setIsLoading(false);
-      initializeMap();
+      // 약간의 지연 후 초기화
+      setTimeout(() => {
+        initializeMap();
+      }, 100);
     };
     
     script.onerror = (error) => {
@@ -78,7 +81,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   };
 
   const initializeMap = () => {
-    if (!mapRef.current || !window.google) {
+    if (!mapRef.current || !window.google || !window.google.maps) {
       console.error('맵 참조 또는 Google API 없음');
       return;
     }
@@ -118,6 +121,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
       toast.success('지도가 성공적으로 로드되었습니다!');
     } catch (error) {
       console.error('지도 초기화 오류:', error);
+      setIsInitialized(false);
       toast.error('지도 초기화에 실패했습니다.');
     }
   };
@@ -253,7 +257,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   useEffect(() => {
     if (map && locations.length > 0) {
       console.log('위치 변경 감지, 마커 업데이트:', locations);
-      setTimeout(() => addMarkersToMap(), 100); // 약간의 지연을 두어 안정성 향상
+      setTimeout(() => addMarkersToMap(), 300); // 약간의 지연을 두어 안정성 향상
     }
   }, [map, locations]);
 
@@ -300,15 +304,18 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
           <div className="w-full h-96 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent mx-auto mb-4"></div>
-              <p className="text-gray-700 font-medium">Google Maps를 로드하는 중...</p>
+              <p className="text-gray-700 font-medium">Google Maps API를 로드하는 중...</p>
               <p className="text-gray-500 text-sm mt-2">잠시만 기다려주세요</p>
             </div>
           </div>
         ) : !isInitialized ? (
           <div className="w-full h-96 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50">
             <div className="text-center">
-              <Map className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">지도를 초기화하는 중...</p>
+              <div className="animate-pulse">
+                <Map className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 font-medium">지도를 초기화하는 중...</p>
+                <p className="text-gray-500 text-sm mt-2">조금만 기다려주세요</p>
+              </div>
             </div>
           </div>
         ) : (
