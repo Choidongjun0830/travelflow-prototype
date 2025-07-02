@@ -6,6 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Map, Navigation, Route, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Extend the Window interface to include google
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
 interface Location {
   name: string;
   lat: number;
@@ -37,7 +44,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   }, []);
 
   const loadGoogleMaps = (key: string) => {
-    if (window.google) {
+    if (window.google && window.google.maps) {
       initializeMap();
       return;
     }
@@ -54,9 +61,9 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   };
 
   const initializeMap = () => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !window.google) return;
 
-    const mapInstance = new google.maps.Map(mapRef.current, {
+    const mapInstance = new window.google.maps.Map(mapRef.current, {
       center: { lat: 37.5665, lng: 126.9780 }, // 서울 중심
       zoom: 12,
       styles: [
@@ -68,8 +75,8 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
       ]
     });
 
-    const directionsServiceInstance = new google.maps.DirectionsService();
-    const directionsRendererInstance = new google.maps.DirectionsRenderer({
+    const directionsServiceInstance = new window.google.maps.DirectionsService();
+    const directionsRendererInstance = new window.google.maps.DirectionsRenderer({
       draggable: true,
       suppressMarkers: false
     });
@@ -96,20 +103,20 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   };
 
   const addMarkersToMap = () => {
-    if (!map || locations.length === 0) return;
+    if (!map || !window.google || locations.length === 0) return;
 
     // 기존 마커들 제거
     markers.forEach(marker => marker.setMap(null));
     
     const newMarkers = locations.map((location, index) => {
-      const marker = new google.maps.Marker({
+      const marker = new window.google.maps.Marker({
         position: { lat: location.lat, lng: location.lng },
         map: map,
         title: location.name,
         label: (index + 1).toString()
       });
 
-      const infoWindow = new google.maps.InfoWindow({
+      const infoWindow = new window.google.maps.InfoWindow({
         content: `
           <div>
             <h3 style="margin: 0 0 8px 0; font-weight: bold;">${location.name}</h3>
@@ -134,7 +141,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   };
 
   const calculateRoute = () => {
-    if (!directionsService || !directionsRenderer || locations.length < 2) {
+    if (!directionsService || !directionsRenderer || !window.google || locations.length < 2) {
       toast.error('경로 계산을 위해서는 최소 2개의 장소가 필요합니다.');
       return;
     }
@@ -144,11 +151,11 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
       stopover: true
     }));
 
-    const request = {
+    const request: google.maps.DirectionsRequest = {
       origin: { lat: locations[0].lat, lng: locations[0].lng },
       destination: { lat: locations[locations.length - 1].lat, lng: locations[locations.length - 1].lng },
       waypoints: waypoints,
-      travelMode: google.maps.TravelMode.WALKING,
+      travelMode: window.google.maps.TravelMode.WALKING,
       optimizeWaypoints: true
     };
 
