@@ -65,7 +65,7 @@ const Index = () => {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">추천 여행 일정</h2>
             <p className="text-lg text-gray-600">
-              AI 의존성 없이 바로 시작할 수 있는 인기 여행 코스를 준비했습니다
+              인기 여행지의 검증된 코스로 쉽고 빠르게 여행을 시작하세요
             </p>
           </div>
 
