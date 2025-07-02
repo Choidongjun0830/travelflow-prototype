@@ -28,77 +28,107 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const [directionsService, setDirectionsService] = useState<google.maps.DirectionsService | null>(null);
   const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
 
   useEffect(() => {
     const apiKey = localStorage.getItem('google_maps_api_key');
-    if (apiKey) {
+    if (apiKey && !isInitialized) {
+      console.log('Google Maps API 키 발견, 지도 로드 시작');
       loadGoogleMaps(apiKey);
     }
-  }, []);
+  }, [isInitialized]);
 
   const loadGoogleMaps = (key: string) => {
     if (window.google && window.google.maps) {
+      console.log('Google Maps API 이미 로드됨, 지도 초기화');
       initializeMap();
       return;
     }
 
+    console.log('Google Maps API 스크립트 로드 시작');
     setIsLoading(true);
+    
+    // 기존 스크립트 제거
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry`;
     script.async = true;
     script.defer = true;
+    
     script.onload = () => {
+      console.log('Google Maps API 스크립트 로드 완료');
       setIsLoading(false);
       initializeMap();
     };
-    script.onerror = () => {
+    
+    script.onerror = (error) => {
+      console.error('Google Maps API 로드 실패:', error);
       setIsLoading(false);
       toast.error('Google Maps API 로드에 실패했습니다. API 키를 확인해주세요.');
     };
+    
     document.head.appendChild(script);
   };
 
   const initializeMap = () => {
-    if (!mapRef.current || !window.google) return;
+    if (!mapRef.current || !window.google) {
+      console.error('맵 참조 또는 Google API 없음');
+      return;
+    }
 
-    const mapInstance = new window.google.maps.Map(mapRef.current, {
-      center: { lat: 37.5665, lng: 126.9780 }, // 서울 중심
-      zoom: 12,
-      styles: [
-        {
-          featureType: 'poi',
-          elementType: 'labels',
-          stylers: [{ visibility: 'on' }]
+    try {
+      console.log('지도 초기화 시작');
+      const mapInstance = new window.google.maps.Map(mapRef.current, {
+        center: { lat: 37.5665, lng: 126.9780 }, // 서울 중심
+        zoom: 12,
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'on' }]
+          }
+        ]
+      });
+
+      const directionsServiceInstance = new window.google.maps.DirectionsService();
+      const directionsRendererInstance = new window.google.maps.DirectionsRenderer({
+        draggable: true,
+        suppressMarkers: false,
+        polylineOptions: {
+          strokeColor: '#4285F4',
+          strokeWeight: 4
         }
-      ]
-    });
+      });
 
-    const directionsServiceInstance = new window.google.maps.DirectionsService();
-    const directionsRendererInstance = new window.google.maps.DirectionsRenderer({
-      draggable: true,
-      suppressMarkers: false,
-      polylineOptions: {
-        strokeColor: '#4285F4',
-        strokeWeight: 4
-      }
-    });
+      directionsRendererInstance.setMap(mapInstance);
 
-    directionsRendererInstance.setMap(mapInstance);
+      setMap(mapInstance);
+      setDirectionsService(directionsServiceInstance);
+      setDirectionsRenderer(directionsRendererInstance);
+      setIsInitialized(true);
 
-    setMap(mapInstance);
-    setDirectionsService(directionsServiceInstance);
-    setDirectionsRenderer(directionsRendererInstance);
-
-    console.log('Google Maps 초기화 완료');
-    toast.success('지도가 성공적으로 로드되었습니다!');
+      console.log('Google Maps 초기화 완료');
+      toast.success('지도가 성공적으로 로드되었습니다!');
+    } catch (error) {
+      console.error('지도 초기화 오류:', error);
+      toast.error('지도 초기화에 실패했습니다.');
+    }
   };
 
   const addMarkersToMap = () => {
     if (!map || !window.google || locations.length === 0) {
-      console.log('마커 추가 조건 불충족:', { map: !!map, google: !!window.google, locations: locations.length });
+      console.log('마커 추가 조건 불충족:', { 
+        map: !!map, 
+        google: !!window.google, 
+        locations: locations.length 
+      });
       return;
     }
 
@@ -156,7 +186,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
       
       // 단일 위치인 경우 줌 레벨 조정
       if (locations.length === 1) {
-        map.setZoom(15);
+        setTimeout(() => map.setZoom(15), 100);
       }
     }
 
@@ -223,7 +253,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
   useEffect(() => {
     if (map && locations.length > 0) {
       console.log('위치 변경 감지, 마커 업데이트:', locations);
-      addMarkersToMap();
+      setTimeout(() => addMarkersToMap(), 100); // 약간의 지연을 두어 안정성 향상
     }
   }, [map, locations]);
 
@@ -267,16 +297,25 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="w-full h-96 rounded-lg border border-gray-200 flex items-center justify-center">
+          <div className="w-full h-96 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">지도를 로드하는 중...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent mx-auto mb-4"></div>
+              <p className="text-gray-700 font-medium">Google Maps를 로드하는 중...</p>
+              <p className="text-gray-500 text-sm mt-2">잠시만 기다려주세요</p>
+            </div>
+          </div>
+        ) : !isInitialized ? (
+          <div className="w-full h-96 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <Map className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">지도를 초기화하는 중...</p>
             </div>
           </div>
         ) : (
           <div 
             ref={mapRef}
             className="w-full h-96 rounded-lg border border-gray-200"
+            style={{ minHeight: '400px' }}
           />
         )}
         
@@ -284,7 +323,7 @@ const GoogleMap = ({ locations = [], onLocationsChange }: GoogleMapProps) => {
           <Button 
             onClick={calculateRoute}
             className="flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
-            disabled={locations.length < 2 || isLoading}
+            disabled={locations.length < 2 || isLoading || !isInitialized}
           >
             <Route className="h-4 w-4 mr-2" />
             경로 최적화
