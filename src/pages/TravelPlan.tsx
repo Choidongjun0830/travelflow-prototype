@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
@@ -46,11 +45,35 @@ const TravelPlan = () => {
         const parsedPlans = JSON.parse(savedPlans);
         setPlans(parsedPlans);
         setShowForm(false);
+        // 저장된 일정이 있으면 자동으로 지도에 표시
+        extractLocationsFromPlans(parsedPlans);
       } catch (error) {
         console.error('저장된 일정을 불러오는데 실패했습니다:', error);
       }
     }
   }, []);
+
+  const extractLocationsFromPlans = async (travelPlans: TravelPlan[]) => {
+    const apiKey = localStorage.getItem('google_maps_api_key');
+    if (!apiKey) {
+      console.log('Google Maps API 키가 없어 위치 추출을 건너뜁니다.');
+      return;
+    }
+
+    const allActivities = travelPlans.flatMap(plan => plan.activities);
+    const uniqueLocations = Array.from(
+      new Set(allActivities.map(activity => activity.location))
+    ).map(location => {
+      const activity = allActivities.find(a => a.location === location);
+      return {
+        name: activity?.activity || location,
+        address: location
+      };
+    });
+
+    console.log('위치 추출 시작:', uniqueLocations.length, '개 장소');
+    await handleLocationExtract(uniqueLocations);
+  };
 
   const handlePlanGenerated = (generatedPlans: any[]) => {
     const formattedPlans: TravelPlan[] = generatedPlans.map((plan, index) => ({
@@ -72,6 +95,10 @@ const TravelPlan = () => {
     
     // 로컬 스토리지에 저장
     localStorage.setItem('travel_plans', JSON.stringify(formattedPlans));
+    
+    // 자동으로 지도에 위치 표시
+    extractLocationsFromPlans(formattedPlans);
+    
     toast.success('여행 일정이 생성되었습니다!');
   };
 
@@ -81,21 +108,23 @@ const TravelPlan = () => {
   };
 
   const handleLocationExtract = async (locations: Array<{name: string, address: string}>) => {
-    // Google Geocoding API를 사용하여 주소를 좌표로 변환
     const apiKey = localStorage.getItem('google_maps_api_key');
     if (!apiKey) {
-      toast.error('Google Maps API 키가 필요합니다.');
+      toast.error('Google Maps API 키가 필요합니다. 홈페이지에서 설정해주세요.');
       return;
     }
 
+    console.log('Geocoding 시작:', locations);
     const geocodedLocations: Location[] = [];
     
     for (const location of locations) {
       try {
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location.address)}&key=${apiKey}`
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location.address)}&key=${apiKey}&language=ko`
         );
         const data = await response.json();
+        
+        console.log(`Geocoding 결과 for ${location.address}:`, data);
         
         if (data.results && data.results.length > 0) {
           const result = data.results[0];
@@ -105,13 +134,23 @@ const TravelPlan = () => {
             lng: result.geometry.location.lng,
             address: result.formatted_address
           });
+          console.log(`성공: ${location.name} -> ${result.geometry.location.lat}, ${result.geometry.location.lng}`);
+        } else {
+          console.warn(`Geocoding 실패: ${location.address}`, data);
         }
       } catch (error) {
-        console.error('Geocoding 실패:', error);
+        console.error('Geocoding 오류:', error);
       }
     }
     
+    console.log('최종 geocoded 위치들:', geocodedLocations);
     setMapLocations(geocodedLocations);
+    
+    if (geocodedLocations.length > 0) {
+      toast.success(`${geocodedLocations.length}개 장소가 지도에 표시됩니다.`);
+    } else {
+      toast.error('주소를 찾을 수 없습니다. 더 구체적인 주소를 입력해주세요.');
+    }
   };
 
   const exportToPDF = () => {
@@ -214,6 +253,18 @@ const TravelPlan = () => {
                           {plans.reduce((total, plan) => total + plan.activities.length, 0)}
                         </div>
                         <div className="text-gray-600">총 일정 수</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">{mapLocations.length}</div>
+                        <div className="text-gray-600">지도 표시 장소</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {plans.reduce((total, plan) => 
+                            total + plan.activities.reduce((sum, activity) => sum + (activity.duration || 60), 0), 0
+                          ) / 60}
+                        </div>
+                        <div className="text-gray-600">총 예상 시간(시간)</div>
                       </div>
                     </div>
                   </div>
