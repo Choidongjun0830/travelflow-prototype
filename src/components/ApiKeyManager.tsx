@@ -10,19 +10,16 @@ import { toast } from 'sonner';
 
 const ApiKeyManager = () => {
   const [geminiKey, setGeminiKey] = useState('');
-  const [googleMapsKey, setGoogleMapsKey] = useState('');
   const [showGeminiKey, setShowGeminiKey] = useState(false);
-  const [showGoogleMapsKey, setShowGoogleMapsKey] = useState(false);
   const [isKeysSaved, setIsKeysSaved] = useState(false);
 
   const handleSaveKeys = () => {
-    if (!geminiKey.trim() || !googleMapsKey.trim()) {
+    if (!geminiKey.trim()) {
       toast.error('모든 API 키를 입력해주세요!');
       return;
     }
 
     localStorage.setItem('gemini_api_key', geminiKey);
-    localStorage.setItem('google_maps_api_key', googleMapsKey);
     
     setIsKeysSaved(true);
     toast.success('API 키가 성공적으로 저장되었습니다!');
@@ -30,20 +27,16 @@ const ApiKeyManager = () => {
 
   const clearKeys = () => {
     setGeminiKey('');
-    setGoogleMapsKey('');
     setIsKeysSaved(false);
     localStorage.removeItem('gemini_api_key');
-    localStorage.removeItem('google_maps_api_key');
     toast.success('API 키가 삭제되었습니다.');
   };
 
   React.useEffect(() => {
     const savedGeminiKey = localStorage.getItem('gemini_api_key');
-    const savedGoogleMapsKey = localStorage.getItem('google_maps_api_key');
     
-    if (savedGeminiKey && savedGoogleMapsKey) {
+    if (savedGeminiKey) {
       setGeminiKey(savedGeminiKey);
-      setGoogleMapsKey(savedGoogleMapsKey);
       setIsKeysSaved(true);
     }
   }, []);
@@ -97,39 +90,6 @@ const ApiKeyManager = () => {
               >
                 Google AI Studio
               </a>에서 무료로 발급받을 수 있습니다.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="google-maps-key" className="text-base font-semibold">
-              Google Maps API 키
-            </Label>
-            <div className="relative">
-              <Input
-                id="google-maps-key"
-                type={showGoogleMapsKey ? 'text' : 'password'}
-                placeholder="Google Cloud Console에서 발급받은 Maps API 키를 입력하세요"
-                value={googleMapsKey}
-                onChange={(e) => setGoogleMapsKey(e.target.value)}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowGoogleMapsKey(!showGoogleMapsKey)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showGoogleMapsKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <p className="text-sm text-gray-600">
-              <a 
-                href="https://console.cloud.google.com/apis/credentials" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                Google Cloud Console
-              </a>에서 Maps JavaScript API를 활성화하고 키를 발급받으세요.
             </p>
           </div>
 
