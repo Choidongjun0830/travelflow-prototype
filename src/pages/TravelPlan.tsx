@@ -39,7 +39,48 @@ const TravelPlan = () => {
   const [showForm, setShowForm] = useState(true);
 
   useEffect(() => {
-    // 로컬 스토리지에서 저장된 일정 불러오기
+    // 먼저 추천 일정 확인
+    const recommendedPlan = localStorage.getItem('recommendedPlan');
+    if (recommendedPlan) {
+      try {
+        const parsedRecommendedPlan = JSON.parse(recommendedPlan);
+        console.log('추천 일정 발견:', parsedRecommendedPlan.title);
+        
+        // 추천 일정을 일반 일정 포맷으로 변환
+        const formattedPlans: TravelPlan[] = parsedRecommendedPlan.plans.map((plan: any) => ({
+          id: plan.id,
+          title: plan.title,
+          day: plan.day,
+          activities: plan.activities.map((activity: any) => ({
+            id: activity.id,
+            time: activity.time,
+            activity: activity.activity,
+            location: activity.location,
+            description: activity.description,
+            duration: activity.duration || 60
+          }))
+        }));
+
+        setPlans(formattedPlans);
+        setShowForm(false);
+        
+        // 일반 여행 계획으로 저장
+        localStorage.setItem('travel_plans', JSON.stringify(formattedPlans));
+        // 추천 일정 데이터는 제거 (한 번만 사용)
+        localStorage.removeItem('recommendedPlan');
+        
+        // 자동으로 지도에 표시
+        extractLocationsFromPlans(formattedPlans);
+        toast.success(`${parsedRecommendedPlan.title} 일정을 불러왔습니다!`);
+        
+        return; // 추천 일정을 로드했으면 기존 일정 확인 생략
+      } catch (error) {
+        console.error('추천 일정을 불러오는데 실패했습니다:', error);
+        localStorage.removeItem('recommendedPlan');
+      }
+    }
+
+    // 추천 일정이 없으면 로컬 스토리지에서 저장된 일정 불러오기
     const savedPlans = localStorage.getItem('travel_plans');
     if (savedPlans) {
       try {

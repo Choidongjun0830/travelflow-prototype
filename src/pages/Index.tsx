@@ -1,14 +1,21 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, Sparkles, Route, Clock, Share2, Download } from "lucide-react";
+import { MapPin, Calendar, Users, Sparkles, Route, Clock, Share2, Download, ArrowRight } from "lucide-react";
 import Header from "../components/Header";
 import ApiKeyManager from "../components/ApiKeyManager";
+import { recommendedPlans } from "../data/recommendedPlans";
 
 const Index = () => {
   const navigate = useNavigate();
+
+  const handleRecommendedPlanClick = (plan: typeof recommendedPlans[0]) => {
+    // 추천 일정을 로컬 스토리지에 저장
+    localStorage.setItem('recommendedPlan', JSON.stringify(plan));
+    // 여행 계획 페이지로 이동
+    navigate('/travel-plan');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
@@ -52,13 +59,80 @@ const Index = () => {
         </div>
       </section>
 
-      {/* API 키 설정 섹션 */}
+      {/* 추천 여행 일정 섹션 */}
       <section className="py-16 px-4 bg-white/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">추천 여행 일정</h2>
+            <p className="text-lg text-gray-600">
+              AI 의존성 없이 바로 시작할 수 있는 인기 여행 코스를 준비했습니다
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {recommendedPlans.map((plan) => (
+              <Card 
+                key={plan.id} 
+                className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group"
+                onClick={() => handleRecommendedPlanClick(plan)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-4xl">{plan.image}</div>
+                    <Badge variant="outline" className="text-xs">
+                      {plan.duration}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-lg leading-tight group-hover:text-blue-600 transition-colors">
+                    {plan.title}
+                  </CardTitle>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <MapPin className="h-4 w-4" />
+                    <span>{plan.destination}</span>
+                    <Badge className="text-xs bg-orange-100 text-orange-700">
+                      {plan.purpose}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <CardDescription className="text-sm mb-4">
+                    {plan.description}
+                  </CardDescription>
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{plan.plans.length}일 일정</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center mt-8">
+            <p className="text-sm text-gray-500 mb-4">
+              더 개인화된 일정이 필요하신가요?
+            </p>
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/travel-plan')}
+              className="px-6"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              AI로 맞춤 일정 생성하기
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* API 키 설정 섹션 */}
+      <section className="py-16 px-4 bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">시작하기 전에</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">AI 기능 사용하기</h2>
             <p className="text-lg text-gray-600">
-              AI 일정 생성과 지도 기능을 사용하려면 API 키 설정이 필요합니다.
+              맞춤형 AI 일정 생성을 위해 API 키 설정을 해주세요
             </p>
           </div>
           <ApiKeyManager />
