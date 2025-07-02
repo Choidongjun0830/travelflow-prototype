@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import TravelPlanForm from '../components/TravelPlanForm';
 import EditableTravelPlan from '../components/EditableTravelPlan';
 import GoogleMap from '../components/GoogleMap';
+import AIPlanChat from '../components/AIPlanChat';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -212,6 +213,16 @@ const TravelPlan = () => {
                   plans={plans} 
                   onPlansChange={handlePlansChange}
                   onLocationExtract={handleLocationExtract}
+                />
+                
+                <AIPlanChat 
+                  plans={plans}
+                  onPlansUpdate={(newPlans) => {
+                    setPlans(newPlans);
+                    localStorage.setItem('travel_plans', JSON.stringify(newPlans));
+                    // 업데이트된 계획을 지도에 반영
+                    extractLocationsFromPlans(newPlans);
+                  }}
                 />
               </div>
               <div className="space-y-6">

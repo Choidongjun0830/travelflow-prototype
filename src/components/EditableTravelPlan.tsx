@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, MapPin, Calendar, Edit, Trash2, Plus, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,6 +33,7 @@ interface EditableTravelPlanProps {
 const EditableTravelPlan = ({ plans, onPlansChange, onLocationExtract }: EditableTravelPlanProps) => {
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [newActivity, setNewActivity] = useState<Partial<Activity>>({});
+  const [activeTab, setActiveTab] = useState('day-1');
 
   const updateActivity = (planId: string, activityId: string, updates: Partial<Activity>) => {
     const updatedPlans = plans.map(plan => {
@@ -132,6 +133,168 @@ const EditableTravelPlan = ({ plans, onPlansChange, onLocationExtract }: Editabl
     return activities.reduce((total, activity) => total + (activity.duration || 60), 0);
   };
 
+  const renderPlanContent = (plan: TravelPlan) => (
+    <Card className="shadow-lg">
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center space-x-2">
+            <Calendar className="h-5 w-5 text-blue-500" />
+            <span>{plan.title}</span>
+          </CardTitle>
+          <Badge>
+            총 {Math.floor(calculateDayDuration(plan.activities) / 60)}시간 {calculateDayDuration(plan.activities) % 60}분
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {plan.activities.map((activity, index) => (
+          <div key={activity.id} className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-orange-50">
+            {editingActivity === activity.id ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    placeholder="시간"
+                    defaultValue={activity.time}
+                    onChange={(e) => updateActivity(plan.id, activity.id, { time: e.target.value })}
+                  />
+                  <Input
+                    placeholder="예상 소요시간(분)"
+                    type="number"
+                    defaultValue={activity.duration || 60}
+                    onChange={(e) => updateActivity(plan.id, activity.id, { duration: parseInt(e.target.value) || 60 })}
+                  />
+                </div>
+                <Input
+                  placeholder="활동명"
+                  defaultValue={activity.activity}
+                  onChange={(e) => updateActivity(plan.id, activity.id, { activity: e.target.value })}
+                />
+                <Input
+                  placeholder="장소"
+                  defaultValue={activity.location}
+                  onChange={(e) => updateActivity(plan.id, activity.id, { location: e.target.value })}
+                />
+                <Textarea
+                  placeholder="설명"
+                  defaultValue={activity.description}
+                  onChange={(e) => updateActivity(plan.id, activity.id, { description: e.target.value })}
+                />
+                <Button onClick={() => setEditingActivity(null)} size="sm">
+                  완료
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4 flex-1">
+                  <div className="flex flex-col items-center space-y-1">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-orange-500 rounded-lg text-white font-semibold flex items-center justify-center text-sm">
+                      {index + 1}
+                    </div>
+                    <GripVertical className="h-4 w-4 text-gray-400" />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-semibold text-blue-600">{activity.time}</span>
+                      {activity.duration && (
+                        <Badge className="text-xs">
+                          {activity.duration}분
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">{activity.activity}</h3>
+                    
+                    <div className="flex items-center space-x-1 mb-2">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">{activity.location}</span>
+                    </div>
+                    
+                    <p className="text-gray-700 text-sm">{activity.description}</p>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => moveActivity(plan.id, activity.id, 'up')}
+                    disabled={index === 0}
+                  >
+                    ↑
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => moveActivity(plan.id, activity.id, 'down')}
+                    disabled={index === plan.activities.length - 1}
+                  >
+                    ↓
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingActivity(activity.id)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => deleteActivity(plan.id, activity.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        
+        {/* 새 일정 추가 */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <Input
+              placeholder="시간 (예: 14:00)"
+              value={newActivity.time || ''}
+              onChange={(e) => setNewActivity({...newActivity, time: e.target.value})}
+            />
+            <Input
+              placeholder="소요시간(분)"
+              type="number"
+              value={newActivity.duration || ''}
+              onChange={(e) => setNewActivity({...newActivity, duration: parseInt(e.target.value)})}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <Input
+              placeholder="활동명"
+              value={newActivity.activity || ''}
+              onChange={(e) => setNewActivity({...newActivity, activity: e.target.value})}
+            />
+            <Input
+              placeholder="장소"
+              value={newActivity.location || ''}
+              onChange={(e) => setNewActivity({...newActivity, location: e.target.value})}
+            />
+          </div>
+          <Textarea
+            placeholder="설명"
+            value={newActivity.description || ''}
+            onChange={(e) => setNewActivity({...newActivity, description: e.target.value})}
+            className="mb-3"
+          />
+          <Button onClick={() => addActivity(plan.id)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            일정 추가
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (!plans || plans.length === 0) {
     return (
       <Card className="w-full">
@@ -154,167 +317,31 @@ const EditableTravelPlan = ({ plans, onPlansChange, onLocationExtract }: Editabl
         </Button>
       </div>
 
-      {plans.map((plan) => (
-        <Card key={plan.id} className="shadow-lg">
-          <CardHeader className="pb-4">
-            <div className="flex justify-between items-center">
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-blue-500" />
-                <span>{plan.title}</span>
-              </CardTitle>
-              <Badge variant="secondary">
-                총 {Math.floor(calculateDayDuration(plan.activities) / 60)}시간 {calculateDayDuration(plan.activities) % 60}분
-              </Badge>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-4">
-            {plan.activities.map((activity, index) => (
-              <div key={activity.id} className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-orange-50">
-                {editingActivity === activity.id ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        placeholder="시간"
-                        defaultValue={activity.time}
-                        onChange={(e) => updateActivity(plan.id, activity.id, { time: e.target.value })}
-                      />
-                      <Input
-                        placeholder="예상 소요시간(분)"
-                        type="number"
-                        defaultValue={activity.duration || 60}
-                        onChange={(e) => updateActivity(plan.id, activity.id, { duration: parseInt(e.target.value) || 60 })}
-                      />
-                    </div>
-                    <Input
-                      placeholder="활동명"
-                      defaultValue={activity.activity}
-                      onChange={(e) => updateActivity(plan.id, activity.id, { activity: e.target.value })}
-                    />
-                    <Input
-                      placeholder="장소"
-                      defaultValue={activity.location}
-                      onChange={(e) => updateActivity(plan.id, activity.id, { location: e.target.value })}
-                    />
-                    <Textarea
-                      placeholder="설명"
-                      defaultValue={activity.description}
-                      onChange={(e) => updateActivity(plan.id, activity.id, { description: e.target.value })}
-                    />
-                    <Button onClick={() => setEditingActivity(null)} size="sm">
-                      완료
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4 flex-1">
-                      <div className="flex flex-col items-center space-y-1">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-orange-500 rounded-lg text-white font-semibold flex items-center justify-center text-sm">
-                          {index + 1}
-                        </div>
-                        <GripVertical className="h-4 w-4 text-gray-400" />
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm font-semibold text-blue-600">{activity.time}</span>
-                          {activity.duration && (
-                            <Badge variant="outline" className="text-xs">
-                              {activity.duration}분
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">{activity.activity}</h3>
-                        
-                        <div className="flex items-center space-x-1 mb-2">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">{activity.location}</span>
-                        </div>
-                        
-                        <p className="text-gray-700 text-sm">{activity.description}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex space-x-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => moveActivity(plan.id, activity.id, 'up')}
-                        disabled={index === 0}
-                      >
-                        ↑
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => moveActivity(plan.id, activity.id, 'down')}
-                        disabled={index === plan.activities.length - 1}
-                      >
-                        ↓
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingActivity(activity.id)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteActivity(plan.id, activity.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className={`w-full flex justify-start gap-2 bg-gray-100 p-2 rounded-lg overflow-x-auto overflow-y-hidden h-[60px]`}>
+          {plans.map((plan) => (
+            <TabsTrigger 
+              key={plan.id} 
+              value={`day-${plan.day}`}
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 py-4 rounded-md transition-all whitespace-nowrap flex-shrink-0 h-[44px]"
+            >
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span className="font-medium">{plan.day}일차</span>
+                <Badge className="text-xs bg-blue-100 text-blue-700">
+                  {plan.activities.length}개
+                </Badge>
               </div>
-            ))}
-            
-            {/* 새 일정 추가 */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <Input
-                  placeholder="시간 (예: 14:00)"
-                  value={newActivity.time || ''}
-                  onChange={(e) => setNewActivity({...newActivity, time: e.target.value})}
-                />
-                <Input
-                  placeholder="소요시간(분)"
-                  type="number"
-                  value={newActivity.duration || ''}
-                  onChange={(e) => setNewActivity({...newActivity, duration: parseInt(e.target.value)})}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <Input
-                  placeholder="활동명"
-                  value={newActivity.activity || ''}
-                  onChange={(e) => setNewActivity({...newActivity, activity: e.target.value})}
-                />
-                <Input
-                  placeholder="장소"
-                  value={newActivity.location || ''}
-                  onChange={(e) => setNewActivity({...newActivity, location: e.target.value})}
-                />
-              </div>
-              <Textarea
-                placeholder="설명"
-                value={newActivity.description || ''}
-                onChange={(e) => setNewActivity({...newActivity, description: e.target.value})}
-                className="mb-3"
-              />
-              <Button onClick={() => addActivity(plan.id)} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                일정 추가
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {plans.map((plan) => (
+          <TabsContent key={plan.id} value={`day-${plan.day}`} className="mt-6">
+            {renderPlanContent(plan)}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };
