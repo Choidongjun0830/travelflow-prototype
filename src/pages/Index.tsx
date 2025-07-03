@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, Sparkles, Route, Clock, Share2, Download, ArrowRight } from "lucide-react";
+import { MapPin, Calendar, Users, Sparkles, Route, Clock, Share2, Download, ArrowRight, Star } from "lucide-react";
 import Header from "../components/Header";
 import ApiKeyManager from "../components/ApiKeyManager";
 import { recommendedPlans } from "../data/recommendedPlans";
@@ -122,6 +122,78 @@ const Index = () => {
               <Sparkles className="mr-2 h-4 w-4" />
               AI로 맞춤 일정 생성하기
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* 사용자 추천 일정 섹션 */}
+      <section className="py-16 px-4 bg-gradient-to-r from-purple-50 to-pink-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">여행자들의 생생한 후기</h2>
+            <p className="text-lg text-gray-600 mb-8">
+              실제 여행을 다녀온 사람들이 공유하는 진짜 여행 일정과 꿀팁을 만나보세요
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <Card className="text-center hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                  👥
+                </div>
+                <CardTitle className="text-lg">실제 여행자 후기</CardTitle>
+                <CardDescription>
+                  가본 사람만 아는 진짜 꿀팁과 숨은 명소들을 발견해보세요
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="text-center hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                  ⭐
+                </div>
+                <CardTitle className="text-lg">검증된 일정</CardTitle>
+                <CardDescription>
+                  평점과 후기로 검증된 믿을 수 있는 여행 일정들을 만나보세요
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="text-center hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                  🎯
+                </div>
+                <CardTitle className="text-lg">바로 사용 가능</CardTitle>
+                <CardDescription>
+                  마음에 드는 일정을 클릭 한 번으로 내 계획으로 가져와 수정하세요
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="text-center space-y-4">
+            <p className="text-sm text-gray-600">
+              🔥 이번 주 인기: 부산 맛집 투어, 제주도 힐링 여행, 경주 역사 탐방
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                onClick={() => navigate('/user-recommendations')}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3"
+              >
+                <Star className="mr-2 h-5 w-5" />
+                추천 일정 둘러보기
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate('/user-recommendations')}
+                className="px-8 py-3 border-purple-200 text-purple-600 hover:bg-purple-50"
+              >
+                내 여행 일정 공유하기
+              </Button>
+            </div>
           </div>
         </div>
       </section>

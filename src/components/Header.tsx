@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plane, Calendar, Users, MapPin } from 'lucide-react';
+import { Plane, Calendar, Users, MapPin, Star } from 'lucide-react';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -46,6 +45,18 @@ const Header = () => {
             >
               <Calendar className="h-4 w-4" />
               <span>여행 계획</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/user-recommendations')}
+              className={`flex items-center space-x-2 transition-colors ${
+                isActive('/user-recommendations') 
+                  ? 'text-blue-600 font-semibold' 
+                  : 'text-gray-600 hover:text-blue-600'
+              }`}
+            >
+              <Star className="h-4 w-4" />
+              <span>추천 일정</span>
             </button>
             
             <button
