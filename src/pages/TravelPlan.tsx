@@ -37,6 +37,8 @@ const TravelPlan = () => {
   const [plans, setPlans] = useState<TravelPlan[]>([]);
   const [mapLocations, setMapLocations] = useState<Location[]>([]);
   const [showForm, setShowForm] = useState(true);
+  const [activeDay, setActiveDay] = useState<number>(1);
+  const [activePlan, setActivePlan] = useState<TravelPlan | null>(null);
 
   useEffect(() => {
     // 먼저 추천 일정 확인
@@ -96,12 +98,18 @@ const TravelPlan = () => {
     }
   }, []);
 
-  const extractLocationsFromPlans = async (travelPlans: TravelPlan[]) => {
-    const allActivities = travelPlans.flatMap(plan => plan.activities);
+  // 현재 선택된 날짜의 위치만 추출하는 함수
+  const extractLocationsFromActivePlan = async (plan: TravelPlan | null, showToast: boolean = false) => {
+    if (!plan || plan.activities.length === 0) {
+      console.log('❌ 현재 날짜에 표시할 일정이 없습니다.');
+      setMapLocations([]);
+      return;
+    }
+
     const uniqueLocations = Array.from(
-      new Set(allActivities.map(activity => activity.location))
+      new Set(plan.activities.map(activity => activity.location))
     ).filter(location => location && location.trim() !== '').map(location => {
-      const activity = allActivities.find(a => a.location === location);
+      const activity = plan.activities.find(a => a.location === location);
       return {
         name: activity?.activity || location,
         address: location
@@ -109,21 +117,95 @@ const TravelPlan = () => {
     });
 
     if (uniqueLocations.length === 0) {
-      console.log('추출할 위치가 없습니다.');
+      console.log('❌ 추출할 위치가 없습니다.');
+      setMapLocations([]);
       return;
     }
 
-    console.log('위치 추출:', uniqueLocations.length, '개 장소');
-    // 가짜 지도에 위치 표시 (실제 지오코딩 없이)
-    const fakeLocations: Location[] = uniqueLocations.map((location, index) => ({
-      name: location.name,
-      lat: 37.5665 + (index * 0.01), // 서울 기준 가짜 좌표
-      lng: 126.9780 + (index * 0.01),
-      address: location.address
-    }));
+    console.log(`🗺️ ${plan.day}일차 위치 추출:`, uniqueLocations.length, '개 장소');
+    console.log('📍 추출된 위치 목록:', uniqueLocations);
     
-    setMapLocations(fakeLocations);
-    toast.success(`${fakeLocations.length}개 장소가 지도에 표시됩니다.`);
+    // Google Maps API를 사용한 실제 지오코딩 시도
+    try {
+      const { geocodeMultipleAddresses, hasValidGoogleMapsKey } = await import('@/utils/googleMaps');
+      
+      console.log('🔑 Google Maps API 키 확인:', hasValidGoogleMapsKey());
+      
+      if (hasValidGoogleMapsKey()) {
+        console.log(`🚀 ${plan.day}일차 - Google Maps API로 지오코딩 시작...`);
+        const geocodedLocations = await geocodeMultipleAddresses(uniqueLocations);
+        console.log('✅ 지오코딩 완료:', geocodedLocations);
+        
+        // 유효한 좌표인지 확인
+        const validLocations = geocodedLocations.filter(loc => 
+          loc.lat !== 0 && loc.lng !== 0 && 
+          !isNaN(loc.lat) && !isNaN(loc.lng)
+        );
+        
+        console.log(`📊 ${plan.day}일차 유효한 좌표:`, validLocations.length, '/', geocodedLocations.length);
+        
+        setMapLocations(validLocations);
+        if (showToast) {
+          toast.success(`${plan.day}일차: ${validLocations.length}개 장소가 지도에 표시됩니다.`);
+        }
+      } else {
+        // API 키가 없으면 가짜 좌표 사용
+        console.log(`⚠️ ${plan.day}일차 - Google Maps API 키가 없어 가짜 좌표 사용`);
+        const fakeLocations: Location[] = uniqueLocations.map((location, index) => ({
+          name: location.name,
+          lat: 37.5665 + (index * 0.01), // 서울 기준 가짜 좌표
+          lng: 126.9780 + (index * 0.01),
+          address: location.address
+        }));
+        
+        console.log('🎭 가짜 좌표 생성:', fakeLocations);
+        setMapLocations(fakeLocations);
+        if (showToast) {
+          toast.success(`${plan.day}일차: ${fakeLocations.length}개 장소가 지도에 표시됩니다. (데모 좌표)`);
+        }
+      }
+    } catch (error) {
+      console.error(`❌ ${plan.day}일차 지오코딩 에러:`, error);
+      // 에러 발생시 가짜 좌표로 폴백
+      const fakeLocations: Location[] = uniqueLocations.map((location, index) => ({
+        name: location.name,
+        lat: 37.5665 + (index * 0.01),
+        lng: 126.9780 + (index * 0.01),
+        address: location.address
+      }));
+      
+      console.log('🔄 폴백: 가짜 좌표 생성:', fakeLocations);
+      setMapLocations(fakeLocations);
+      if (showToast) {
+        toast.success(`${plan.day}일차: ${fakeLocations.length}개 장소가 지도에 표시됩니다. (데모 좌표)`);
+      }
+    }
+  };
+
+  // 탭 변경 시 호출되는 콜백 함수
+  const handleActiveTabChange = (dayNumber: number, plan: TravelPlan | null) => {
+    console.log(`📅 탭 변경: ${dayNumber}일차로 이동`);
+    setActiveDay(dayNumber);
+    setActivePlan(plan);
+    
+    // 해당 날짜의 위치만 지도에 표시 (알림 없음)
+    extractLocationsFromActivePlan(plan, false);
+  };
+
+  // 기존 extractLocationsFromPlans 함수는 전체 일정용으로 유지하되, 1일차만 표시하도록 수정
+  const extractLocationsFromPlans = async (travelPlans: TravelPlan[]) => {
+    if (travelPlans.length === 0) {
+      console.log('❌ 추출할 일정이 없습니다.');
+      return;
+    }
+
+    // 첫 번째 일정 (1일차)만 표시
+    const firstPlan = travelPlans.find(plan => plan.day === 1) || travelPlans[0];
+    console.log('🎯 초기 로드: 1일차 일정을 지도에 표시');
+    
+    setActiveDay(firstPlan.day);
+    setActivePlan(firstPlan);
+    await extractLocationsFromActivePlan(firstPlan, false); // 초기 로드시 알림 없음
   };
 
   const handlePlanGenerated = (generatedPlans: any[]) => {
@@ -160,18 +242,16 @@ const TravelPlan = () => {
   };
 
   const handleLocationExtract = async (locations: Array<{name: string, address: string}>) => {
-    console.log('지도에 위치 표시:', locations);
+    console.log('🗺️ "지도에서 보기" 버튼 클릭 - 현재 선택된 날짜의 일정 표시');
     
-    // 가짜 지도에 위치 표시 (실제 지오코딩 없이)
-    const fakeLocations: Location[] = locations.map((location, index) => ({
-      name: location.name,
-      lat: 37.5665 + (index * 0.01), // 서울 기준 가짜 좌표
-      lng: 126.9780 + (index * 0.01),
-      address: location.address
-    }));
-    
-    setMapLocations(fakeLocations);
-    toast.success(`${fakeLocations.length}개 장소가 지도에 표시됩니다.`);
+    // 현재 선택된 날짜의 일정만 표시 (알림 있음)
+    if (activePlan) {
+      console.log(`📍 ${activePlan.day}일차 일정을 지도에 표시`);
+      await extractLocationsFromActivePlan(activePlan, true); // 버튼 클릭시 알림 표시
+    } else {
+      console.log('❌ 선택된 날짜가 없습니다.');
+      toast.error('표시할 일정이 없습니다.');
+    }
   };
 
   const exportToPDF = () => {
@@ -254,15 +334,23 @@ const TravelPlan = () => {
                   plans={plans} 
                   onPlansChange={handlePlansChange}
                   onLocationExtract={handleLocationExtract}
+                  onActiveTabChange={handleActiveTabChange}
                 />
                 
                 <AIPlanChat 
                   plans={plans}
                   onPlansUpdate={(newPlans) => {
+                    console.log('🤖 AI 채팅으로 일정 업데이트됨');
                     setPlans(newPlans);
                     localStorage.setItem('travel_plans', JSON.stringify(newPlans));
-                    // 업데이트된 계획을 지도에 반영
-                    extractLocationsFromPlans(newPlans);
+                    
+                    // 현재 선택된 날짜의 업데이트된 일정을 지도에 반영 (알림 없음)
+                    const updatedActivePlan = newPlans.find(plan => plan.day === activeDay);
+                    if (updatedActivePlan) {
+                      console.log(`📅 ${activeDay}일차 업데이트된 일정을 지도에 반영`);
+                      setActivePlan(updatedActivePlan);
+                      extractLocationsFromActivePlan(updatedActivePlan, false); // AI 업데이트시 알림 없음
+                    }
                   }}
                 />
               </div>
@@ -273,7 +361,15 @@ const TravelPlan = () => {
                 />
                 {plans.length > 0 && (
                   <div className="bg-white rounded-lg p-6 shadow-lg">
-                    <h3 className="text-lg font-semibold mb-4">여행 통계</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">여행 통계</h3>
+                      {activePlan && (
+                        <div className="flex items-center space-x-2 text-sm">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          <span className="text-gray-600">현재 지도: {activePlan.day}일차</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">{plans.length}</div>
@@ -281,9 +377,9 @@ const TravelPlan = () => {
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-orange-600">
-                          {plans.reduce((total, plan) => total + plan.activities.length, 0)}
+                          {activePlan ? activePlan.activities.length : plans.reduce((total, plan) => total + plan.activities.length, 0)}
                         </div>
-                        <div className="text-gray-600">총 일정 수</div>
+                        <div className="text-gray-600">{activePlan ? `${activePlan.day}일차 일정` : '총 일정 수'}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">{mapLocations.length}</div>
@@ -291,11 +387,14 @@ const TravelPlan = () => {
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-purple-600">
-                          {plans.reduce((total, plan) => 
-                            total + plan.activities.reduce((sum, activity) => sum + (activity.duration || 60), 0), 0
-                          ) / 60}
+                          {activePlan 
+                            ? Math.round(activePlan.activities.reduce((sum, activity) => sum + (activity.duration || 60), 0) / 60)
+                            : Math.round(plans.reduce((total, plan) => 
+                                total + plan.activities.reduce((sum, activity) => sum + (activity.duration || 60), 0), 0
+                              ) / 60)
+                          }
                         </div>
-                        <div className="text-gray-600">총 예상 시간(시간)</div>
+                        <div className="text-gray-600">{activePlan ? `${activePlan.day}일차 예상시간(시간)` : '총 예상 시간(시간)'}</div>
                       </div>
                     </div>
                   </div>

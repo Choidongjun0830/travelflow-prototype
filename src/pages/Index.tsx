@@ -132,7 +132,7 @@ const Index = () => {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">AI 기능 사용하기</h2>
             <p className="text-lg text-gray-600">
-              맞춤형 AI 일정 생성을 위해 API 키 설정을 해주세요
+              맞춤형 AI 일정 생성과 실제 지도 표시를 위해 API 키를 설정해주세요
             </p>
           </div>
           <ApiKeyManager />

@@ -89,7 +89,8 @@ const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
   };
 
   const generateTravelPlan = async (apiKey: string, prompt: string) => {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // 프록시를 통한 API 호출로 변경
+    const response = await fetch(`/api/gemini/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,11 +110,22 @@ const TravelPlanForm = ({ onPlanGenerated }: TravelPlanFormProps) => {
       })
     });
 
+    console.log('API 응답 상태:', response.status);
+    console.log('API 응답 헤더:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error(`API 호출 실패: ${response.status}`);
+      const errorText = await response.text();
+      console.error('API 에러 응답:', errorText);
+      throw new Error(`API 호출 실패: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('API 성공 응답:', data);
+    
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error('API 응답 형식이 올바르지 않습니다.');
+    }
+    
     return data.candidates[0].content.parts[0].text;
   };
 
@@ -160,6 +172,29 @@ ${preferences.avoidActivities.join(', ')}
 - 장소 간 최대 도보 거리: ${preferences.maxWalkingDistance}km 이내
 - 활동당 최대 예산: ${preferences.budgetPerActivity}만원 이하
 
+🎯 **주소 정확성 요구사항** 🎯
+location 필드에는 반드시 다음 중 하나의 형식으로 정확한 주소를 포함해야 합니다:
+
+**한국의 경우:**
+- 우편번호 포함: "04524 서울특별시 중구 명동길 26 (명동2가)"
+- 도로명주소: "서울특별시 종로구 종로 1 (종로1가)"
+- 상세주소: "서울특별시 강남구 테헤란로 152 강남파이낸스센터"
+
+**일본의 경우:**
+- 우편번호: "〒100-0005 東京都千代田区丸の内1丁目"
+- 상세주소: "京都府京都市東山区清水1丁目294"
+
+**중국의 경우:**
+- "上海市黄浦区南京东路 200号"
+- "北京市东城区天安门广场"
+
+**기타 국가:**
+- 우편번호와 상세 주소를 모두 포함
+- 유명 랜드마크의 경우 정확한 주소 명시
+
+❗ 절대로 "명동", "강남", "시부야" 같은 일반적인 지역명만 사용하지 마세요.
+❗ 반드시 구체적인 도로명, 건물명, 우편번호가 포함된 정확한 주소를 사용하세요.
+
 응답 형식 (JSON만):
 [
   {
@@ -169,7 +204,13 @@ ${preferences.avoidActivities.join(', ')}
       {
         "time": "09:00",
         "activity": "${preferences.mustVisitPlaces.length > 0 ? preferences.mustVisitPlaces[0] + ' 방문' : '공항 도착'}",
-        "location": "${preferences.mustVisitPlaces.length > 0 ? preferences.mustVisitPlaces[0] : formData.destination + ' 공항'}",
+        "location": "${preferences.mustVisitPlaces.length > 0 ? 
+          (formData.destination.includes('서울') ? '04524 서울특별시 중구 명동길 26' : 
+           formData.destination.includes('도쿄') ? '〒100-0005 東京都千代田区丸の内1丁目' :
+           formData.destination.includes('상하이') ? '上海市黄浦区南京东路 200号' :
+           '정확한 우편번호와 주소 포함 필요') : 
+          (formData.destination.includes('서울') ? '07505 서울특별시 강서구 하늘길 112 (공항동) 인천국제공항' :
+           formData.destination + ' 국제공항')}",
         "description": "${preferences.mustVisitPlaces.length > 0 ? '필수 방문 장소 - ' + preferences.mustVisitPlaces[0] + ' 관람' : '공항 도착 후 숙소로 이동'}"
       }
     ]
@@ -182,9 +223,18 @@ ${preferences.avoidActivities.join(', ')}
 3. 각 필수 장소/활동은 반드시 하나 이상의 일정에 포함될 것
 4. 금지된 장소/활동은 절대 포함하지 말 것
 5. 제약 조건을 엄격히 준수할 것
-6. JSON 외 다른 텍스트나 설명은 절대 포함하지 말 것
+6. **location 필드에는 반드시 우편번호와 상세 주소를 포함한 정확한 주소 사용**
+7. JSON 외 다른 텍스트나 설명은 절대 포함하지 말 것
 
-⚠️ 필수 조건을 지키지 않으면 응답이 거부됩니다.
+⚠️ 필수 조건과 주소 정확성을 지키지 않으면 응답이 거부됩니다.
+
+🌍 **주요 관광지 주소 참고 예시**:
+- 경복궁: "03045 서울특별시 종로구 사직로 161"
+- 명동성당: "04537 서울특별시 중구 명동길 74"
+- 도쿄 스카이트리: "〒131-0045 東京都墨田区押上1丁目1-2"
+- 교토 청수사: "〒605-0862 京都府京都市東山区清水1丁目294"
+- 상하이 와이탄: "上海市黄浦区中山东一路"
+- 제주 성산일출봉: "63643 제주특별자치도 서귀포시 성산읍 성산리 1"
 `;
   };
 
@@ -246,11 +296,17 @@ ${preferences.avoidActivities.join(', ')}
       return;
     }
 
+    console.log('여행 계획 생성 시작...');
+    console.log('API 키 존재:', !!apiKey);
+    console.log('API 키 길이:', apiKey.length);
+
     setIsGenerating(true);
     
     try {
       const prompt = createPrompt();
       console.log('생성된 프롬프트:', prompt);
+      
+      toast.info('AI가 맞춤형 여행 일정을 생성하고 있습니다...');
       
       const result = await generateTravelPlan(apiKey, prompt);
       console.log('AI 응답:', result);
@@ -258,7 +314,7 @@ ${preferences.avoidActivities.join(', ')}
       // JSON 파싱
       const travelPlan = parseJsonFromResponse(result);
       
-      toast.success('AI 여행 일정이 생성되었습니다!');
+      toast.success('AI 여행 일정이 성공적으로 생성되었습니다!');
       
       // 생성된 일정을 부모 컴포넌트로 전달
       if (onPlanGenerated) {
@@ -269,16 +325,36 @@ ${preferences.avoidActivities.join(', ')}
       
     } catch (error) {
       console.error('일정 생성 오류:', error);
+      
       if (error instanceof Error) {
-        if (error.message.includes('401')) {
-          toast.error('API 키가 유효하지 않습니다. 키를 다시 확인해주세요.');
-        } else if (error.message.includes('403')) {
-          toast.error('API 키 권한이 없습니다. Gemini API가 활성화되어 있는지 확인해주세요.');
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes('401') || errorMessage.includes('unauthorized')) {
+          toast.error('API 키가 유효하지 않습니다. Gemini API 키를 다시 확인해주세요.');
+        } else if (errorMessage.includes('403') || errorMessage.includes('forbidden')) {
+          toast.error('API 키 권한이 없습니다. Google AI Studio에서 Gemini API가 활성화되어 있는지 확인해주세요.');
+        } else if (errorMessage.includes('400') || errorMessage.includes('bad request')) {
+          toast.error('요청 형식이 올바르지 않습니다. 입력 정보를 다시 확인해주세요.');
+        } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+          toast.error('API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요.');
+        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+          toast.error('네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.');
+        } else if (errorMessage.includes('cors')) {
+          toast.error('브라우저 보안 문제가 발생했습니다. 페이지를 새로고침 후 다시 시도해주세요.');
         } else {
           toast.error(`일정 생성 중 오류가 발생했습니다: ${error.message}`);
         }
+        
+        // 개발자를 위한 상세 로그
+        console.group('🚨 API 호출 실패 - 디버깅 정보');
+        console.log('에러 타입:', error.constructor.name);
+        console.log('에러 메시지:', error.message);
+        console.log('스택 트레이스:', error.stack);
+        console.log('API 키 첫 10자리:', apiKey.substring(0, 10) + '...');
+        console.groupEnd();
       } else {
         toast.error('일정 생성 중 알 수 없는 오류가 발생했습니다.');
+        console.error('알 수 없는 에러:', error);
       }
     } finally {
       setIsGenerating(false);

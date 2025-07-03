@@ -28,12 +28,36 @@ interface EditableTravelPlanProps {
   plans: TravelPlan[];
   onPlansChange: (plans: TravelPlan[]) => void;
   onLocationExtract: (locations: Array<{name: string, address: string}>) => void;
+  onActiveTabChange?: (activeDay: number, activePlan: TravelPlan | null) => void;
 }
 
-const EditableTravelPlan = ({ plans, onPlansChange, onLocationExtract }: EditableTravelPlanProps) => {
+const EditableTravelPlan = ({ plans, onPlansChange, onLocationExtract, onActiveTabChange }: EditableTravelPlanProps) => {
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [newActivity, setNewActivity] = useState<Partial<Activity>>({});
   const [activeTab, setActiveTab] = useState('day-1');
+
+  // activeTab이 변경될 때마다 상위 컴포넌트에 알림
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    
+    // 현재 탭의 날짜 정보 추출
+    const dayNumber = parseInt(value.replace('day-', ''));
+    const activePlan = plans.find(plan => plan.day === dayNumber);
+    
+    // 상위 컴포넌트에 현재 선택된 날짜와 해당 일정 전달
+    if (onActiveTabChange) {
+      onActiveTabChange(dayNumber, activePlan || null);
+    }
+  };
+
+  // 컴포넌트 마운트 시에도 초기 탭 정보 전달
+  React.useEffect(() => {
+    if (plans.length > 0 && onActiveTabChange) {
+      const dayNumber = parseInt(activeTab.replace('day-', ''));
+      const activePlan = plans.find(plan => plan.day === dayNumber);
+      onActiveTabChange(dayNumber, activePlan || null);
+    }
+  }, [plans, onActiveTabChange]);
 
   const updateActivity = (planId: string, activityId: string, updates: Partial<Activity>) => {
     const updatedPlans = plans.map(plan => {
@@ -317,7 +341,7 @@ const EditableTravelPlan = ({ plans, onPlansChange, onLocationExtract }: Editabl
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className={`w-full flex justify-start gap-2 bg-gray-100 p-2 rounded-lg overflow-x-auto overflow-y-hidden h-[60px]`}>
           {plans.map((plan) => (
             <TabsTrigger 
