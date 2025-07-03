@@ -2,13 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, Sparkles, Route, Clock, Share2, Download, ArrowRight, Star } from "lucide-react";
+import { MapPin, Calendar, Users, Sparkles, Route, Clock, Share2, Download, ArrowRight, Star, Settings, X } from "lucide-react";
 import Header from "../components/Header";
 import ApiKeyManager from "../components/ApiKeyManager";
 import { recommendedPlans } from "../data/recommendedPlans";
+import { useState } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const handleRecommendedPlanClick = (plan: typeof recommendedPlans[0]) => {
     // 추천 일정을 로컬 스토리지에 저장
@@ -37,7 +39,7 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button 
               size="lg" 
               onClick={() => navigate('/travel-plan')}
@@ -46,15 +48,21 @@ const Index = () => {
               <Sparkles className="mr-2 h-5 w-5" />
               AI 여행 계획 시작하기
             </Button>
+          </div>
+
+          {/* API 키 관리 버튼 */}
+          <div className="mt-6">
             <Button 
-              size="lg" 
               variant="outline"
-              onClick={() => navigate('/collaboration')}
-              className="px-8 py-3"
+              onClick={() => setShowApiKeyModal(true)}
+              className="text-sm px-6 py-2 border-gray-300 text-gray-600 hover:bg-gray-50"
             >
-              <Users className="mr-2 h-5 w-5" />
-              협업 보드 사용하기
+              <Settings className="mr-2 h-4 w-4" />
+              API 키 관리하기
             </Button>
+            <p className="text-xs text-gray-500 mt-2">
+              AI 기능 사용을 위해 API 키 설정이 필요합니다
+            </p>
           </div>
         </div>
       </section>
@@ -198,19 +206,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* API 키 설정 섹션 */}
-      <section className="py-16 px-4 bg-gradient-to-r from-gray-50 to-blue-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">AI 기능 사용하기</h2>
-            <p className="text-lg text-gray-600">
-              맞춤형 AI 일정 생성과 실제 지도 표시를 위해 API 키를 설정해주세요
-            </p>
-          </div>
-          <ApiKeyManager />
-        </div>
-      </section>
-
       {/* Features Section */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
@@ -265,7 +260,7 @@ const Index = () => {
                 </div>
                 <CardTitle>실시간 협업</CardTitle>
                 <CardDescription>
-                  친구들과 함께 일정을 편집하고 실시간으로 의견을 공유하세요.
+                  여행 계획을 세우면서 친구들과 실시간으로 의견을 나누고 함께 편집하세요.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -332,42 +327,11 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">
                 3
               </div>
-              <h3 className="text-xl font-semibold mb-4">편집 및 최적화</h3>
+              <h3 className="text-xl font-semibold mb-4">편집 및 협업</h3>
               <p className="text-gray-600">
-                생성된 일정을 편집하고 경로를 최적화하여 완벽한 여행을 만드세요.
+                생성된 일정을 편집하고 친구들과 실시간으로 협업하여 완벽한 여행을 만드세요.
               </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-gray-800 mb-6">
-            지금 바로 시작해보세요!
-          </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            AI의 도움으로 더 스마트하고 효율적인 여행을 계획하세요.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              onClick={() => navigate('/travel-plan')}
-              className="bg-gradient-to-r from-blue-500 to-orange-500 hover:from-blue-600 hover:to-orange-600 text-white px-8 py-3"
-            >
-              <Calendar className="mr-2 h-5 w-5" />
-              여행 계획 시작하기
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              onClick={() => navigate('/collaboration')}
-              className="px-8 py-3"
-            >
-              <Users className="mr-2 h-5 w-5" />
-              협업 보드 체험하기
-            </Button>
           </div>
         </div>
       </section>
@@ -378,6 +342,33 @@ const Index = () => {
           <p>&copy; 2024 TravelFlow. AI와 함께하는 스마트한 여행 계획.</p>
         </div>
       </footer>
+
+      {/* API 키 관리 모달 */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">API 키 관리</h2>
+                  <p className="text-blue-100">AI 기능 사용을 위해 API 키를 설정해주세요</p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowApiKeyModal(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg"
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6">
+              <ApiKeyManager />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

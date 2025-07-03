@@ -5,8 +5,10 @@ import TravelPlanForm from '../components/TravelPlanForm';
 import EditableTravelPlan from '../components/EditableTravelPlan';
 import GoogleMap from '../components/GoogleMap';
 import AIPlanChat from '../components/AIPlanChat';
+import CollaborationPanel from '../components/CollaborationPanel';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Share2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Download, Share2, Users, Map, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Activity {
@@ -39,6 +41,8 @@ const TravelPlan = () => {
   const [showForm, setShowForm] = useState(true);
   const [activeDay, setActiveDay] = useState<number>(1);
   const [activePlan, setActivePlan] = useState<TravelPlan | null>(null);
+  const [isCollaborationMode, setIsCollaborationMode] = useState(false);
+  const [rightPanelView, setRightPanelView] = useState<'map' | 'collaboration'>('map');
 
   useEffect(() => {
     // 먼저 추천 일정 확인
@@ -284,8 +288,25 @@ const TravelPlan = () => {
     setPlans([]);
     setMapLocations([]);
     setShowForm(true);
+    setIsCollaborationMode(false);
+    setRightPanelView('map');
     localStorage.removeItem('travel_plans');
     toast.success('새로운 여행 계획을 시작합니다.');
+  };
+
+  const toggleCollaboration = () => {
+    setIsCollaborationMode(!isCollaborationMode);
+    if (!isCollaborationMode) {
+      setRightPanelView('collaboration');
+      toast.success('협업 모드가 활성화되었습니다!');
+    } else {
+      setRightPanelView('map');
+      toast.success('협업 모드가 종료되었습니다.');
+    }
+  };
+
+  const switchRightPanel = (view: 'map' | 'collaboration') => {
+    setRightPanelView(view);
   };
 
   return (
@@ -304,10 +325,27 @@ const TravelPlan = () => {
                 <span>홈으로</span>
               </Button>
               <h1 className="text-3xl font-bold text-gray-800">여행 일정 관리</h1>
+              
+              {/* 협업 모드 표시 */}
+              {isCollaborationMode && (
+                <Badge className="bg-green-100 text-green-700 border-green-200">
+                  <Users className="h-3 w-3 mr-1" />
+                  협업 모드
+                </Badge>
+              )}
             </div>
             
             {plans.length > 0 && (
               <div className="flex space-x-2">
+                {/* 협업 토글 버튼 */}
+                <Button 
+                  variant={isCollaborationMode ? "default" : "outline"}
+                  onClick={toggleCollaboration}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {isCollaborationMode ? '협업 중' : '협업하기'}
+                </Button>
+                
                 <Button variant="outline" onClick={exportToPDF}>
                   <Download className="h-4 w-4 mr-2" />
                   PDF 저장
@@ -354,11 +392,46 @@ const TravelPlan = () => {
                   }}
                 />
               </div>
+              
               <div className="space-y-6">
-                <GoogleMap 
-                  locations={mapLocations}
-                  onLocationsChange={(newLocations) => setMapLocations(newLocations)}
-                />
+                {/* 우측 패널 전환 버튼 */}
+                {isCollaborationMode && (
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <Button
+                      variant={rightPanelView === 'map' ? 'default' : 'ghost'}
+                      onClick={() => switchRightPanel('map')}
+                      className="flex-1"
+                      size="sm"
+                    >
+                      <Map className="h-4 w-4 mr-2" />
+                      지도
+                    </Button>
+                    <Button
+                      variant={rightPanelView === 'collaboration' ? 'default' : 'ghost'}
+                      onClick={() => switchRightPanel('collaboration')}
+                      className="flex-1"
+                      size="sm"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      협업
+                    </Button>
+                  </div>
+                )}
+
+                {/* 지도 또는 협업 패널 */}
+                {rightPanelView === 'map' ? (
+                  <GoogleMap 
+                    locations={mapLocations}
+                    onLocationsChange={(newLocations) => setMapLocations(newLocations)}
+                  />
+                ) : (
+                  <CollaborationPanel
+                    planId={plans[0]?.id || 'default'}
+                    isCollaborationMode={isCollaborationMode}
+                    onToggleCollaboration={toggleCollaboration}
+                  />
+                )}
+                
                 {plans.length > 0 && (
                   <div className="bg-white rounded-lg p-6 shadow-lg">
                     <div className="flex items-center justify-between mb-4">
